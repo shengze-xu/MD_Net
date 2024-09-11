@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-@author: Meina Zhang
-"""
-
 from __future__ import print_function
 import matplotlib.pyplot as plt
 import argparse
@@ -26,7 +21,7 @@ import math
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--num_iter', type=int, default=1500, help='number of epochs of training')
+parser.add_argument('--num_iter', type=int, default=4500, help='number of epochs of training')
 parser.add_argument('--kernel_size', type=int, default=[79, 79], help='size of blur kernel [height, width]')
 parser.add_argument('--img_size', type=int, default=[256, 256], help='size of each image dimension')
 parser.add_argument('--img_size1', type=int, default=[630, 518], help='size of each image dimension')
@@ -43,7 +38,7 @@ dtype = torch.cuda.FloatTensor
 
 warnings.filterwarnings("ignore") 
 
-files_source = glob.glob(os.path.join(opt.data_path, 'wall.jpg'))
+files_source = glob.glob(os.path.join(opt.data_path, 'bicycle.jpg'))
 
 files_source.sort()
 save_path = opt.save_path
@@ -74,13 +69,30 @@ for f in files_source:
     img_size = y.shape
     n_scales = 3
     imgs_trans = imgs.transpose(1,2,0)
-    pyramid = list(pyramid_gaussian(imgs_trans, n_scales-1, multichannel=True))
+
+
+    ##################################
+    # print(imgs_trans.shape)
+
+    #pyramid = list(pyramid_gaussian(imgs_trans, n_scales-1,multichannel= True))
+    pyramid1 = [list(pyramid_gaussian(imgs_trans[:, :, i], max_layer=n_scales-1)) for i in range(imgs_trans.shape[2])]
+
+    # print(len(pyramid1))
+    
+    pyramid = []
+    for i in range(len(pyramid1[0])): # 假设每个通道的金字塔层数相同
+        pyramid.append(np.stack([pyramid1[0][i], pyramid1[1][i], pyramid1[2][i]], axis=-1))
+    ##################################
+
     for l in range(len(pyramid)):
         pyramid[l] = pyramid[l].transpose(2,0,1)
         
     pyramid_size0 = pyramid[0].shape
     pyramid_size1 = pyramid[1].shape
     pyramid_size2 = pyramid[2].shape
+
+    # print(pyramid[0].shape,pyramid[1].shape,pyramid[2].shape)
+
     pyramid0 = np_to_torch(pyramid[0]).type(dtype)    
     pyramid1 = np_to_torch(pyramid[1]).type(dtype)
     pyramid2 = np_to_torch(pyramid[2]).type(dtype)  
@@ -163,7 +175,11 @@ for f in files_source:
         out_y1 = nn.functional.conv2d(skip_out1, out_k_m1, padding=0, groups =3,bias=None)
         out_y0 = nn.functional.conv2d(skip_out0, out_k_m0, padding=0, groups =3,bias=None)
         
-        
+        ##################################
+        # print(out_y2.shape, pyramid2.shape)
+        # print(out_y1.shape, pyramid1.shape)
+        # print(out_y0.shape, pyramid0.shape)
+        ##################################
 
         if step < 300:
       
